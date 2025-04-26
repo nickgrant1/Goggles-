@@ -7,6 +7,12 @@ wget https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip
 unzip vosk-model-small-en-us-0.15.zip
 mv vosk-model-small-en-us-0.15 model
 
+arecord -l   #lists inputs, see if mic is connected
+
+arecord -D plughw:1,0 -f cd test.wav #test mic  change (plughw:1,0 with device)
+aplay test.wav  #to play audio back
+
+#python code
 import sounddevice as sd
 import queue
 import json
@@ -14,17 +20,24 @@ from vosk import Model, KaldiRecognizer
 
 q = queue.Queue()
 
+# Callback function to process audio data
 def callback(indata, frames, time, status):
     if status:
         print(status)
     q.put(bytes(indata))
 
-model = Model("model")
+# Load the Vosk model
+model = Model("model")  # Make sure 'model' folder contains the Vosk model
 recognizer = KaldiRecognizer(model, 16000)
 
-with sd.RawInputStream(samplerate=16000, blocksize=8000, dtype='int16',
-                       channels=1, callback=callback):
+# Specify the correct input device (e.g., device_id=1 for Apple earbuds)
+device_id = 1  # Update this to the correct device ID from 'arecord -l'
+
+# Open the input stream with the specified device ID
+with sd.RawInputStream(samplerate=16000, blocksize=8000, dtype='int16', 
+                       channels=1, callback=callback, device=device_id):
     print("🎤 Listening... Say something like 'start run' or 'pause music'")
+
     while True:
         data = q.get()
         if recognizer.AcceptWaveform(data):
